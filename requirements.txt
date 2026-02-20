@@ -1,0 +1,9 @@
+streamlit
+demucs
+basic-pitch
+librosa
+pydub
+soundfile
+numpy
+scipy
+torch
