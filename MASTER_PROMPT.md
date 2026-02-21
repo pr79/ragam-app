@@ -19,7 +19,7 @@ Use this prompt to recreate the Ragam App in any GPT-4 class model.
 > - Handle FFmpeg as a portable dependency in a `bin/` folder.
 > - Use `soundfile` for robust audio saving on Windows.
 > 
-> **Design**: Use a layout and dark-mode friendly Streamlit aesthetics with tabs/expanders for results."
+> **Design**: Use a modern layout with custom CSS (glassmorphism, gradient buttons, dark-mode) similar to modern AI audio apps like Suno.ai. Ensure st.session_state is properly cleared via on_change callbacks on file uploaders to prevent stale data."
 
 ## Step-by-Step Instructions for AI
 1. **Phase 1: Environment Setup**

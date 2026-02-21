@@ -43,6 +43,64 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# --- MODERN UI CSS INJECTION ---
+st.markdown("""
+<style>
+    /* Global Background and Fonts */
+    .stApp {
+        background: linear-gradient(135deg, #0f172a, #1e1b4b, #2e1065);
+        color: #f8fafc;
+        font-family: 'Inter', sans-serif;
+    }
+    
+    /* Headers */
+    h1, h2, h3 {
+        color: #e2e8f0 !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.02em;
+    }
+
+    /* Cards and Containers (Glassmorphism) */
+    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(90deg, #8b5cf6, #d946ef);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+    }
+    
+    /* File Uploader override */
+    [data-testid="stFileUploadDropzone"] {
+        background: rgba(255, 255, 255, 0.02);
+        border: 2px dashed rgba(139, 92, 246, 0.4);
+        border-radius: 16px;
+    }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: rgba(15, 23, 42, 0.95);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # --- INTERNAL IMPORTS ---
 # Imports are done after PATH setup to ensure sub-dependencies find FFmpeg
 import src.audio_processor
@@ -66,6 +124,11 @@ if "stems" not in st.session_state:
 if "original_audio" not in st.session_state:
     st.session_state.original_audio = None # Path to uploaded file
 
+def reset_session_state():
+    """Callback fired when a new file is uploaded to prevent old stems from showing."""
+    st.session_state.stems = {}
+    st.session_state.analyze_target = None
+
 # --- UI HEADER ---
 st.title("🎵 AI Music Separator & Raga Identifier")
 st.markdown("""
@@ -77,7 +140,8 @@ using state-of-the-art AI models (Demucs, Basic Pitch).
 # Allowed formats cover common audio codecs
 uploaded_file = st.file_uploader(
     "Upload a Song (MP3, WAV, etc.)", 
-    type=["mp3", "wav", "m4a", "flac", "ogg"]
+    type=["mp3", "wav", "m4a", "flac", "ogg"],
+    on_change=reset_session_state
 )
 
 if uploaded_file is not None:
@@ -107,14 +171,7 @@ if uploaded_file is not None:
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("1. Instant Analysis")
-        st.write("Analyze the full track without separation.")
-        if st.button("Analyze Original", use_container_width=True):
-             # Trigger analysis without changing dropdown focus
-             st.session_state.analyze_target = "Original"
-
-    with col2:
-        st.subheader("2. Source Separation")
+        st.subheader("1. Source Separation")
         st.write("Split song into Vocals, Bass, Drums, and Others.")
         if st.button("Run Demucs Separator", use_container_width=True):
             with st.spinner("Processing audio... This uses MD5 caching for speed."):
@@ -132,6 +189,13 @@ if uploaded_file is not None:
                 except Exception as e:
                     st.error(f"Separation failed: {e}")
                     st.code(traceback.format_exc())
+
+    with col2:
+        st.subheader("2. Instant Analysis")
+        st.write("Analyze the full track without separation.")
+        if st.button("Analyze Original", use_container_width=True):
+             # Trigger analysis without changing dropdown focus
+             st.session_state.analyze_target = "Original"
 
     # --- SECTION 2: STEM MIXER ---
     if st.session_state.stems:
