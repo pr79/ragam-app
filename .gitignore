@@ -1,0 +1,20 @@
+# Ignore build artifacts
+__pycache__/
+*.pyc
+venv/
+venv_mac_build/
+build/
+dist/
+*.spec
+bin/
+
+# Ignore user data
+data/uploads/
+data/outputs/
+*.wav
+*.mp3
+*.flac
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
