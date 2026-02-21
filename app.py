@@ -70,8 +70,9 @@ st.markdown("""
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
     
-    /* Buttons */
-    .stButton > button {
+    /* Buttons (including the Browse files button in the uploader) */
+    .stButton > button, 
+    [data-testid="stBaseButton-secondary"] {
         background: linear-gradient(90deg, #8b5cf6, #d946ef);
         color: white;
         border: none;
@@ -81,9 +82,11 @@ st.markdown("""
         transition: all 0.3s ease;
         box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
     }
-    .stButton > button:hover {
+    .stButton > button:hover,
+    [data-testid="stBaseButton-secondary"]:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+        color: white;
     }
     
     /* File Uploader override */
