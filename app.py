@@ -101,6 +101,22 @@ st.markdown("""
         background-color: rgba(15, 23, 42, 0.95);
         border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
+    
+    /* Expanders & Status Dropdowns Fix */
+    [data-testid="stExpander"] details, 
+    [data-testid="stStatusWidget"] {
+        background: rgba(15, 23, 42, 0.7);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    [data-testid="stExpander"] summary,
+    [data-testid="stStatusWidget"] summary {
+        color: #e2e8f0 !important;
+    }
+    [data-testid="stExpander"] summary:hover,
+    [data-testid="stStatusWidget"] summary:hover {
+        color: #d946ef !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
