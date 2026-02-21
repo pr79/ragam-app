@@ -149,7 +149,7 @@ if uploaded_file is not None:
                 if stem_name == "Custom Mix": continue # Don't mix the mix
                 with cols[j]:
                     st.markdown(f"**{stem_name.title()}**")
-                    st.audio(stem_path)
+                    st.audio(str(stem_path), format="audio/wav")
                     mix_selections[stem_name] = st.checkbox(
                         "Include", value=True, key=f"mix_{stem_name}"
                     )
@@ -164,7 +164,7 @@ if uploaded_file is not None:
                     # Output is saved to 'data/outputs/mixes'
                     output_mix = get_output_path("mixes") / "custom_mix.wav"
                     mix_stems(selected_paths, output_mix)
-                    st.audio(str(output_mix))
+                    st.audio(str(output_mix), format="audio/wav")
                     st.session_state.stems["Custom Mix"] = str(output_mix) 
                 else:
                     st.warning("Please select at least one track to mix.")
