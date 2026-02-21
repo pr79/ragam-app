@@ -46,13 +46,13 @@ def get_file_hash(file_path):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
-def separate_audio(file_path, model_name="mdx_extra_q"):
+def separate_audio(file_path, model_name="htdemucs"):
     """
     Splits an audio file into 4 stems: Vocals, Drums, Bass, and Other.
     
     Args:
         file_path: Path to the input audio file.
-        model_name: The Demucs model to use (default: mdx_extra_q for low RAM).
+        model_name: The Demucs model to use (default: htdemucs).
         
     Returns:
         Dictionary mapping stem names to their absolute file paths.
@@ -113,7 +113,6 @@ def separate_audio(file_path, model_name="mdx_extra_q"):
     args = [
         "--out", str(OUTPUT_DIR),
         "-n", model_name,
-        "--jobs", "1",
         str(file_path)
     ]
     
