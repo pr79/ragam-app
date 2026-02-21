@@ -109,13 +109,28 @@ st.markdown("""
         border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
+    
     [data-testid="stExpander"] summary,
     [data-testid="stStatusWidget"] summary {
-        color: #e2e8f0 !important;
+        color: #d946ef !important;
+        background: transparent !important;
     }
+    
     [data-testid="stExpander"] summary:hover,
     [data-testid="stStatusWidget"] summary:hover {
-        color: #d946ef !important;
+        color: #e2e8f0 !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+    
+    /* Remove white background block when an expander is open */
+    [data-testid="stExpander"] details[open] summary,
+    [data-testid="stStatusWidget"] details[open] summary {
+        background: transparent !important;
+    }
+    
+    /* Hide the green checkmark icon in the status widget so it looks like a normal expander */
+    [data-testid="stStatusWidget"] [data-testid="stIconMaterial"] {
+        color: inherit !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -123,7 +138,7 @@ st.markdown("""
 # --- INTERNAL IMPORTS ---
 # Imports are done after PATH setup to ensure sub-dependencies find FFmpeg
 import src.audio_processor
-from src.audio_processor import separate_audio, mix_stems, transcribe_audio
+from src.audio_processor import separate_audio, mix_stems, transcribe_audio, normalize_for_safari
 import src.music_theory
 from src.music_theory import (
     estimate_key, identify_raga, detect_chords_over_time, 
@@ -148,6 +163,18 @@ def reset_session_state():
     st.session_state.stems = {}
     st.session_state.analyze_target = None
 
+def play_audio(file_path):
+    """
+    Helper function to bypass iOS Safari audio playback bugs on Hugging Face Spaces.
+    Safari strictly requires HTTP 206 Byte-Range requests for audio streaming, but 
+    Hugging Face's proxy often strips those headers. 
+    By reading the file directly into a Python bytes object first, Streamlit 
+    embeds the audio natively as a B64 Data URI, bypassing the server network.
+    """
+    with open(file_path, "rb") as f:
+        audio_bytes = f.read()
+    st.audio(audio_bytes, format='audio/wav')
+
 # --- UI HEADER ---
 st.title("🎵 AI Music Separator & Raga Identifier")
 st.markdown("""
@@ -165,10 +192,14 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
     # Persistent storage of the uploaded file
-    file_path = save_uploaded_file(uploaded_file)
+    raw_file_path = save_uploaded_file(uploaded_file)
+    
+    # Immediately normalize for Apple/Safari compliance
+    file_path = normalize_for_safari(raw_file_path)
+    
     st.session_state.original_audio = file_path
     
-    st.audio(file_path, format='audio/wav')
+    play_audio(file_path)
     st.success(f"File ready: {uploaded_file.name}")
 
     # --- SIDEBAR CONTROLS ---
@@ -232,7 +263,7 @@ if uploaded_file is not None:
                 if stem_name == "Custom Mix": continue # Don't mix the mix
                 with cols[j]:
                     st.markdown(f"**{stem_name.title()}**")
-                    st.audio(str(stem_path), format="audio/wav")
+                    play_audio(stem_path)
                     mix_selections[stem_name] = st.checkbox(
                         "Include", value=True, key=f"mix_{stem_name}"
                     )
@@ -247,7 +278,7 @@ if uploaded_file is not None:
                     # Output is saved to 'data/outputs/mixes'
                     output_mix = get_output_path("mixes") / "custom_mix.wav"
                     mix_stems(selected_paths, output_mix)
-                    st.audio(str(output_mix), format="audio/wav")
+                    play_audio(output_mix)
                     st.session_state.stems["Custom Mix"] = str(output_mix) 
                 else:
                     st.warning("Please select at least one track to mix.")
@@ -307,6 +338,7 @@ if uploaded_file is not None:
             st.write("Analyzing Harmony / Chords...")
             times, chords = detect_chords_over_time(target_path, duration=30)
             
+            # Change state to 'complete' without the green checkmark
             status.update(label="Analysis Done!", state="complete", expanded=True)
 
         # --- RESULTS LAYOUT ---

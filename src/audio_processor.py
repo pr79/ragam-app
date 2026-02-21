@@ -34,6 +34,27 @@ except ImportError:
     BASIC_PITCH_AVAILABLE = False
     print("Basic Pitch not available. Transcription will use Librosa fallback.")
 
+def normalize_for_safari(input_path):
+    """
+    Reads an audio file of any format and rewrites it as a strict 16-bit PCM WAV.
+    This is necessary because iOS Safari refuses to play many valid audio formats
+    (like certain M4As or 32-bit floats) natively in the HTML5 player.
+    """
+    input_path = Path(input_path)
+    try:
+        # soundfile natively reads most formats through pysoundfile/libsndfile
+        data, sr = sf.read(str(input_path))
+        
+        # Create a normalized version beside the original
+        clean_path = input_path.with_name(f"{input_path.stem}_safari.wav")
+        
+        # Force strict 16-bit PCM (universally supported by all mobile browsers)
+        sf.write(str(clean_path), data, sr, subtype='PCM_16')
+        return clean_path
+    except Exception as e:
+        print(f"Warning: Could not normalize audio for Safari: {e}")
+        return input_path
+
 def get_file_hash(file_path):
     """
     Generates a unique MD5 hash for a file.
