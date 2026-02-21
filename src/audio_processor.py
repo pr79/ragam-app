@@ -102,7 +102,7 @@ def separate_audio(file_path, model_name="mdx_extra_q"):
         if data.ndim == 2 and data.shape[0] < data.shape[1]:
              data = data.T
              
-        sf.write(str(path), data, sr)
+        sf.write(str(path), data, sr, subtype='PCM_16')
         
     # Apply patches
     demucs.audio.save_audio = robust_save_audio
@@ -234,7 +234,7 @@ def mix_stems(stem_paths, output_path):
             
         out_file = Path(output_path)
         out_file.parent.mkdir(parents=True, exist_ok=True)
-        sf.write(str(out_file), master_audio, common_sr)
+        sf.write(str(out_file), master_audio, common_sr, subtype='PCM_16')
         return out_file
     
     return None
