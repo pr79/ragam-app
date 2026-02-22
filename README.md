@@ -1,3 +1,14 @@
+---
+title: Ragam App
+emoji: 🎵
+colorFrom: indigo
+colorTo: purple
+sdk: streamlit
+sdk_version: "1.32.0"
+app_file: app.py
+pinned: false
+---
+
 # 🎵 Ragam App: AI Music Analysis Suite
 
 A state-of-the-art platform for audio separation, karaoke generation, and Indian Classical Music (Raga) identification.
