@@ -1,6 +1,6 @@
 ---
 title: Ragam App
-emoji: 🎵
+emoji: 🎵🚀
 colorFrom: indigo
 colorTo: purple
 sdk: streamlit
