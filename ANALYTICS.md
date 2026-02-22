@@ -16,6 +16,7 @@ This report summarizes the effort and technical journey of creating the Ragam Ap
 | **ImportError** | Medium | PyInstaller missing hidden dependencies or version mismatch. | Added `hiddenimports` in `.spec` file and patched `numba` to handle missing functions in frozen state. |
 | **Logic/Crash** | Low | Argument mismatch in `mix_stems` (missing directory check). | Added `parent.mkdir(parents=True, exist_ok=True)` before file writes. |
 | **Performance** | Low | Deep analysis hanging on long audio files. | Implemented a 60-second processing limit for pitch extraction and MD5-based result caching. |
+| **UI State Loss** | Low | Streamlit re-runs destroying conditionally rendered media players (Custom Mix). | Decoupled UI media elements from the button execution block to rely directly on `st.session_state` keys instead. |
 
 ## Automation Efficacy
 - **Autonomous Fix Rate**: ~85% (Antigravity resolved most environment and logic bugs without user intervention).

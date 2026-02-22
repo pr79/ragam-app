@@ -21,6 +21,15 @@ import numpy as np
 import soundfile as sf
 import librosa
 
+# --- IMAGEIO FFMPEG INJECTION ---
+try:
+    import imageio_ffmpeg
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    os.environ['PATH'] += os.pathsep + os.path.dirname(ffmpeg_exe)
+except ImportError:
+    pass
+
+
 # Internal imports
 from src.utils import OUTPUT_DIR
 

@@ -8,3 +8,5 @@ numpy
 scipy
 torch
 torchaudio
+
+imageio-ffmpeg

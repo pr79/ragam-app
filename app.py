@@ -262,10 +262,15 @@ if uploaded_file is not None:
                     # Output is saved to 'data/outputs/mixes'
                     output_mix = get_output_path("mixes") / "custom_mix.wav"
                     mix_stems(selected_paths, output_mix)
-                    st.audio(str(output_mix), format="audio/wav")
                     st.session_state.stems["Custom Mix"] = str(output_mix) 
                 else:
                     st.warning("Please select at least one track to mix.")
+
+            # Independent display of the generated mix (persists across re-runs)
+            if "Custom Mix" in st.session_state.stems:
+                st.markdown("---")
+                st.markdown("### 🎧 Your Custom Mix")
+                st.audio(st.session_state.stems["Custom Mix"], format="audio/wav")
 
     st.divider()
     
