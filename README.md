@@ -23,7 +23,7 @@ cd ragam_app
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the setup script to download models and binaries
+# Run the setup script to download models and binaries (if necessary)
 python setup_ffmpeg.py
 ```
 
@@ -47,9 +47,15 @@ For technical deep-dives into the development process, please refer to:
 - [MASTER_PROMPT.md](MASTER_PROMPT.md): Instructions to recreate this project.
 - [TESTING_AND_LEARNINGS.md](TESTING_AND_LEARNINGS.md): QA reports and key takeaways.
 
-## 🛠️ Mac OS Support (Coming Soon)
-A macOS setup script and `.sh` installer are currently in the implementation plan. 
-Stay tuned for the official Mac package!
+## ☁️ Cloud Deployment (Hugging Face Spaces)
+The easiest way to host this app for free is on a **Hugging Face Space** using the Streamlit SDK.
+1. Create a Streamlit Space.
+2. Ensure you have a `packages.txt` file containing the word `ffmpeg`.
+3. Drag and drop the `app.py`, `requirements.txt`, and `src/` folder into the Space.
+*(Note: iOS Safari users may experience audio player errors due to Apple's strict iframe security policies on WebKit. A dedicated server host is recommended for flawless mobile performance).*
+
+## 🛠️ Mac OS Support
+Mac integration is fully supported via the `mac_build.sh` script, which automatically configures Homebrew, FFmpeg, and Python environments.
 
 ---
 **Disclaimer**: This app is using heavy AI models. Initial runs for separation and transcription may take 1-2 minutes depending on hardware.
