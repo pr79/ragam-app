@@ -138,7 +138,7 @@ st.markdown("""
 # --- INTERNAL IMPORTS ---
 # Imports are done after PATH setup to ensure sub-dependencies find FFmpeg
 import src.audio_processor
-from src.audio_processor import separate_audio, mix_stems, transcribe_audio, normalize_for_safari
+from src.audio_processor import separate_audio, mix_stems, transcribe_audio
 import src.music_theory
 from src.music_theory import (
     estimate_key, identify_raga, detect_chords_over_time, 
@@ -163,18 +163,6 @@ def reset_session_state():
     st.session_state.stems = {}
     st.session_state.analyze_target = None
 
-def play_audio(file_path):
-    """
-    Helper function to bypass iOS Safari audio playback bugs on Hugging Face Spaces.
-    Safari strictly requires HTTP 206 Byte-Range requests for audio streaming, but 
-    Hugging Face's proxy often strips those headers. 
-    By reading the file directly into a Python bytes object first, Streamlit 
-    embeds the audio natively as a B64 Data URI, bypassing the server network.
-    """
-    with open(file_path, "rb") as f:
-        audio_bytes = f.read()
-    st.audio(audio_bytes, format='audio/wav')
-
 # --- UI HEADER ---
 st.title("🎵 AI Music Separator & Raga Identifier")
 st.markdown("""
@@ -192,14 +180,10 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
     # Persistent storage of the uploaded file
-    raw_file_path = save_uploaded_file(uploaded_file)
-    
-    # Immediately normalize for Apple/Safari compliance
-    file_path = normalize_for_safari(raw_file_path)
-    
+    file_path = save_uploaded_file(uploaded_file)
     st.session_state.original_audio = file_path
     
-    play_audio(file_path)
+    st.audio(str(file_path), format='audio/wav')
     st.success(f"File ready: {uploaded_file.name}")
 
     # --- SIDEBAR CONTROLS ---
@@ -263,7 +247,7 @@ if uploaded_file is not None:
                 if stem_name == "Custom Mix": continue # Don't mix the mix
                 with cols[j]:
                     st.markdown(f"**{stem_name.title()}**")
-                    play_audio(stem_path)
+                    st.audio(str(stem_path), format="audio/wav")
                     mix_selections[stem_name] = st.checkbox(
                         "Include", value=True, key=f"mix_{stem_name}"
                     )
@@ -278,7 +262,7 @@ if uploaded_file is not None:
                     # Output is saved to 'data/outputs/mixes'
                     output_mix = get_output_path("mixes") / "custom_mix.wav"
                     mix_stems(selected_paths, output_mix)
-                    play_audio(output_mix)
+                    st.audio(str(output_mix), format="audio/wav")
                     st.session_state.stems["Custom Mix"] = str(output_mix) 
                 else:
                     st.warning("Please select at least one track to mix.")

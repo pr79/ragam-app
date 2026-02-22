@@ -33,3 +33,10 @@
 ### 4. AI-Agent Collaboration
 - **Issue**: The agent can move very fast, sometimes out-pacing the user's manual check.
 - **Learning**: Structuring tasks into clear 'Verification' phases helps the user keep track of what is truly "done" vs "implemented."
+
+
+
+### 5. Deployment Warnings (Hugging Face & iOS Safari)
+- **Safari Audio Playback / HTTP 206 Errors**: When deploying the Streamlit app into an iframe (like Hugging Face Spaces), Apple iOS Safari strictly enforces HTTP 206 Byte-Range requests for any HTML5 <audio> streaming. Because Hugging Face server proxies often strip or block these requests, the Streamlit st.audio() player will throw a permanent 'Error' on iPhones.
+  - *Attempted Fixes*: Native HTML5 <audio> injections and base64 URI encodings bypass the network error, but Apple's strict iframe security policies often block the Streamlit Javascript player wrapper from executing. Native UI download buttons (st.download_button) also face buggy behavior. 
+  - *Recommendation*: Advise users that iOS compatibility within Hugging Face iframes is fundamentally broken due to WebKit security policies. For a seamless iPhone experience, the app must be hosted on a dedicated server (AWS, Heroku, or direct Streamlit Community Cloud) outside of an iframe.

@@ -20,3 +20,9 @@ This report summarizes the effort and technical journey of creating the Ragam Ap
 ## Automation Efficacy
 - **Autonomous Fix Rate**: ~85% (Antigravity resolved most environment and logic bugs without user intervention).
 - **Manual Intervention**: Only required for platform-specific requests (e.g., "Create Mac version") or high-level design changes.
+
+
+### iOS Safari x Hugging Face Iframe Limitations
+- **Problem**: Apple's WebKit engine block Streamlit's media wrappers from executing properly inside Hugging Face Spaces iframes.
+- **Attempts**: Base64 embedding and raw HTML5 injection bypass the HTTP network errors but still encounter strict iframe sandboxing.
+- **Resolution**: Acknowledged as a platform limitation. A full deployment outside of an iframe (e.g. Heroku, AWS Cloud Run) is required for seamless iOS audio playback.
