@@ -46,92 +46,38 @@ st.set_page_config(
 # --- MODERN UI CSS INJECTION ---
 st.markdown("""
 <style>
-    /* Global Background and Fonts */
-    .stApp {
-        background: linear-gradient(135deg, #0f172a, #1e1b4b, #2e1065);
-        color: #f8fafc;
-        font-family: 'Inter', sans-serif;
-    }
-    
-    /* Headers */
-    h1, h2, h3 {
-        color: #e2e8f0 !important;
-        font-weight: 700 !important;
-        letter-spacing: -0.02em;
-    }
+/* Gradient Header Text */
+.header-text {
+    font-family: 'Inter', sans-serif;
+    background: -webkit-linear-gradient(45deg, #FF4B2B, #FF416C);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
 
-    /* Cards and Containers (Glassmorphism) */
-    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 1.5rem;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    
-    /* Buttons (including the Browse files button in the uploader) */
-    .stButton > button, 
-    [data-testid="stBaseButton-secondary"] {
-        background: linear-gradient(90deg, #8b5cf6, #d946ef);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-    }
-    .stButton > button:hover,
-    [data-testid="stBaseButton-secondary"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
-        color: white;
-    }
-    
-    /* File Uploader override */
-    [data-testid="stFileUploadDropzone"] {
-        background: rgba(255, 255, 255, 0.02);
-        border: 2px dashed rgba(139, 92, 246, 0.4);
-        border-radius: 16px;
-    }
-    
-    /* Sidebar */
-    [data-testid="stSidebar"] {
-        background-color: rgba(15, 23, 42, 0.95);
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    
-    /* Expanders & Status Dropdowns Fix */
-    [data-testid="stExpander"] details, 
-    [data-testid="stStatusWidget"] {
-        background: rgba(15, 23, 42, 0.7);
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    [data-testid="stExpander"] summary,
-    [data-testid="stStatusWidget"] summary {
-        color: #d946ef !important;
-        background: transparent !important;
-    }
-    
-    [data-testid="stExpander"] summary:hover,
-    [data-testid="stStatusWidget"] summary:hover {
-        color: #e2e8f0 !important;
-        background: rgba(255, 255, 255, 0.05) !important;
-    }
-    
-    /* Remove white background block when an expander is open */
-    [data-testid="stExpander"] details[open] summary,
-    [data-testid="stStatusWidget"] details[open] summary {
-        background: transparent !important;
-    }
-    
-    /* Hide the green checkmark icon in the status widget so it looks like a normal expander */
-    [data-testid="stStatusWidget"] [data-testid="stIconMaterial"] {
-        color: inherit !important;
-    }
+/* Premium Button UX */
+.stButton>button {
+    width: 100%;
+    border-radius: 8px;
+    transition: 0.3s;
+    font-weight: 600;
+}
+
+/* 3D Float Hover Effect */
+.stButton>button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* Reference Card Styling */
+.ref-card {
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid #FF416C;
+}
 </style>
 """, unsafe_allow_html=True)
 

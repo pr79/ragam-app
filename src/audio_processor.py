@@ -20,6 +20,8 @@ import torch
 import numpy as np
 import soundfile as sf
 import librosa
+import socket
+import urllib.error
 
 # --- IMAGEIO FFMPEG INJECTION ---
 try:
@@ -126,6 +128,10 @@ def separate_audio(file_path, model_name="htdemucs"):
     ]
     
     try:
+        import socket
+        # Set a default timeout for underlying socket operations (e.g. model downloads)
+        socket.setdefaulttimeout(15.0)
+        
         demucs.separate.main(args)
         
         # Demucs creates a nested structure. We rename it to our hash-based folder.
@@ -135,6 +141,10 @@ def separate_audio(file_path, model_name="htdemucs"):
                 shutil.rmtree(track_dir)
             default_output_dir.rename(track_dir)
             
+    except socket.timeout:
+        raise RuntimeError(f"Connection timed out after 15s. The distant server or proxy failed to respond.")
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"Network routing failed. The server cannot be reached: {str(e)}")
     except Exception as e:
         raise RuntimeError(f"Demucs separation failed: {e}")
         
@@ -146,6 +156,9 @@ def extract_pitch_librosa(file_path, duration=60):
     Optimized for short segments to avoid performance bottleneck.
     """
     try:
+        import socket
+        socket.setdefaulttimeout(15.0)
+
         # Load audio (mono, 22050Hz is usually sufficient for pitch)
         y, sr = librosa.load(str(file_path), sr=None, duration=duration)
         
@@ -187,6 +200,12 @@ def extract_pitch_librosa(file_path, duration=60):
         # Filter noise (notes shorter than 100ms)
         return str(file_path), [n for n in note_events if (n[1] - n[0]) > 0.1]
         
+    except socket.timeout:
+        print("Librosa Transcription Error: Connection timed out after 15s during external operation.")
+        return None, []
+    except urllib.error.URLError as e:
+        print(f"Librosa Transcription Error: Network routing failed. {str(e)}")
+        return None, []
     except Exception as e:
         print(f"Librosa Transcription Error: {e}")
         return None, []
@@ -199,6 +218,9 @@ def transcribe_audio(file_path):
         return extract_pitch_librosa(file_path)
 
     try:
+        import socket
+        socket.setdefaulttimeout(15.0)
+
         # Basic Pitch prediction
         # Output: (model_output, note_data, note_events)
         _, midi_data, note_events = predict(
@@ -210,6 +232,12 @@ def transcribe_audio(file_path):
         )
         # Note: we don't save the MIDI to disk unless needed, we just pass the events
         return file_path, note_events
+    except socket.timeout:
+        print("Basic Pitch Error: Connection timed out. Falling back...")
+        return extract_pitch_librosa(file_path)
+    except urllib.error.URLError as e:
+        print(f"Basic Pitch Error: Network routing failed - {str(e)}. Falling back...")
+        return extract_pitch_librosa(file_path)
     except Exception as e:
         print(f"Basic Pitch Error: {e}. Falling back...")
         return extract_pitch_librosa(file_path)

@@ -1,8 +1,8 @@
 # Ragam App Baseline Version
 
-**Version Code:** `🔥 Baseline_v2.0_Stable`
-**Description:** Official Stable Release for Hugging Face Spaces & Local Windows.
-**Status:** Pristine code with no experimental iOS routing or Beta hacks. Stable UI with full Raga database capabilities.
+**Version Code:** `🔥 Baseline_v3.0_Global_Framework`
+**Description:** Official Architectural Upgrade bringing in Global Framework styling and Resilience patterns.
+**Status:** Pristine code with robust timeout handling for heavy inference (Demucs/Basic Pitch). UI injected with dynamic Light/Dark mode Support via Premium Streamlit Theme.
 
 ### Contents of this stable release:
 - Native `st.audio()` elements for all media wrappers.
