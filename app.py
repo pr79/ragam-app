@@ -14,7 +14,8 @@ import os
 import sys
 import time
 import traceback
-from streamlit_advanced_audio import audix
+import base64
+import streamlit.components.v1 as components
 from pathlib import Path
 
 # --- BOOTSTRAP: FFmpeg & Environment ---
@@ -92,7 +93,7 @@ from src.music_theory import (
     note_to_swaras, midi_to_western, format_swara_sequence
 )
 import src.utils
-from src.utils import UPLOAD_DIR, setup_dirs, save_uploaded_file, get_output_path
+from src.utils import UPLOAD_DIR, setup_dirs, save_uploaded_file, get_output_path, create_preview_audio
 
 # Initialize directory structure (uploads, outputs, etc.)
 setup_dirs()
@@ -112,6 +113,75 @@ def reset_session_state():
     st.session_state.stems = {}
     st.session_state.analyze_target = None
     st.session_state.analysis_results = None
+
+def render_wavesurfer(audio_path, key):
+    preview_path = create_preview_audio(audio_path)
+    try:
+        with open(preview_path, "rb") as f:
+            b64_audio = base64.b64encode(f.read()).decode()
+    except Exception as e:
+        st.error(f"Failed to load audio for preview: {e}")
+        return
+
+    html_template = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+        <style>
+            body { font-family: sans-serif; margin: 0; padding: 0; background: transparent; overflow: hidden; }
+            #waveform-KEY { width: 100%; height: 80px; margin-bottom: 5px; }
+            .controls { display: flex; align-items: center; gap: 10px; }
+            button { background: #FF416C; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px; }
+            button:hover { background: #FF4B2B; }
+            #time-KEY { font-size: 13px; color: #555; }
+        </style>
+    </head>
+    <body>
+        <div id="waveform-KEY"></div>
+        <div class="controls">
+            <button id="play-KEY">Play / Pause</button>
+            <span id="time-KEY">0:00 / 0:00</span>
+        </div>
+        
+        <script>
+            const wavesurfer = WaveSurfer.create({
+                container: '#waveform-KEY',
+                waveColor: '#ff7b93',
+                progressColor: '#FF416C',
+                barWidth: 2,
+                barRadius: 2,
+                cursorColor: '#FF4B2B',
+                height: 80,
+                normalize: true,
+                url: 'data:audio/mp3;base64,B64_AUDIO_DATA'
+            });
+
+            const btn = document.getElementById('play-KEY');
+            const timeEl = document.getElementById('time-KEY');
+
+            wavesurfer.on('interaction', () => wavesurfer.play());
+            btn.addEventListener('click', () => wavesurfer.playPause());
+            
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            };
+
+            wavesurfer.on('audioprocess', () => {
+                timeEl.textContent = formatTime(wavesurfer.getCurrentTime()) + ' / ' + formatTime(wavesurfer.getDuration());
+            });
+            
+            wavesurfer.on('ready', () => {
+                timeEl.textContent = '0:00 / ' + formatTime(wavesurfer.getDuration());
+            });
+        </script>
+    </body>
+    </html>
+    """
+    html = html_template.replace("KEY", key).replace("B64_AUDIO_DATA", b64_audio)
+    components.html(html, height=130)
 
 # --- UI HEADER ---
 st.title("🎵 AI Music Separator & Raga Identifier")
@@ -133,7 +203,7 @@ if uploaded_file is not None:
     file_path = save_uploaded_file(uploaded_file)
     st.session_state.original_audio = file_path
     
-    audix(str(file_path), key="audix_original")
+    render_wavesurfer(str(file_path), key="original")
     st.success(f"File ready: {uploaded_file.name}")
 
     # --- SIDEBAR CONTROLS ---
@@ -199,7 +269,7 @@ if uploaded_file is not None:
                         mix_selections[stem_name] = st.checkbox("Include in Mix", value=True, key=f"mix_{stem_name}")
                         
                     with row_col2:
-                        audix(str(stem_path), key=f"audix_{stem_name}")
+                        render_wavesurfer(str(stem_path), key=f"stem_{stem_name}")
                         
                     with row_col3:
                         with open(stem_path, "rb") as f:
@@ -233,7 +303,7 @@ if uploaded_file is not None:
                     with row_col1:
                         st.markdown("**Custom Mix**")
                     with row_col2:
-                        audix(str(custom_mix_path), key="audix_custom_mix")
+                        render_wavesurfer(str(custom_mix_path), key="custom_mix")
                     with row_col3:
                         with open(custom_mix_path, "rb") as f:
                             st.download_button(

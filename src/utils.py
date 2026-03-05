@@ -6,6 +6,7 @@ Handles file I/O, directory management, and path resolution.
 import os
 import shutil
 from pathlib import Path
+from pydub import AudioSegment
 
 # --- DIRECTORY STRUCTURE ---
 # data/
@@ -65,3 +66,29 @@ def save_uploaded_file(uploaded_file):
         f.write(uploaded_file.getbuffer())
         
     return file_path
+
+def create_preview_audio(wav_path):
+    """
+    Creates a highly compressed mono MP3 preview of a WAV file to be used in UI visualizers.
+    This prevents Streamlit WebSocket crashes caused by sending massive uncompressed audio streams.
+    
+    Args:
+        wav_path (Path or str): Absolute path to the original WAV file.
+        
+    Returns:
+        Path: Absolute path to the compressed MP3 preview.
+    """
+    wav_path = Path(wav_path)
+    mp3_path = wav_path.with_suffix('.preview.mp3')
+    
+    if not mp3_path.exists():
+        try:
+            audio = AudioSegment.from_wav(str(wav_path))
+            # Mix to mono and compress to 64k to save WebSocket UI payload
+            audio = audio.set_channels(1)
+            audio.export(str(mp3_path), format="mp3", bitrate="64k")
+        except Exception as e:
+            print(f"Error creating preview MP3: {e}")
+            return wav_path # fallback to original if ffmpeg fails
+            
+    return mp3_path
