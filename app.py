@@ -253,12 +253,8 @@ if uploaded_file is not None:
             st.subheader("🎚️ Separated Tracks")
             st.info("Adjust which tracks to include in your custom mix (e.g., for Karaoke). Download individual tracks via the buttons.")
             
-            mix_selections = {}
-            stems_list = list(st.session_state.stems.items())
-            
-            for stem_name, stem_path in stems_list:
-                if stem_name == "Custom Mix": continue
-                
+            @st.fragment
+            def render_stem_row(stem_name, stem_path):
                 with st.container(border=True):
                     # Responsive columns for each track row
                     row_col1, row_col2, row_col3 = st.columns([1.5, 4, 1])
@@ -266,7 +262,7 @@ if uploaded_file is not None:
                     with row_col1:
                         display_name = stem_name.replace("_", " ").title()
                         st.markdown(f"**{display_name}**")
-                        mix_selections[stem_name] = st.checkbox("Include in Mix", value=True, key=f"mix_{stem_name}")
+                        st.checkbox("Include in Mix", value=True, key=f"mix_{stem_name}")
                         
                     with row_col2:
                         render_wavesurfer(str(stem_path), key=f"stem_{stem_name}")
@@ -281,12 +277,17 @@ if uploaded_file is not None:
                                 key=f"dl_{stem_name}",
                                 use_container_width=True
                             )
+
+            for stem_name, stem_path in list(st.session_state.stems.items()):
+                if stem_name == "Custom Mix": continue
+                render_stem_row(stem_name, stem_path)
                             
             st.markdown("---")
             if st.button("Generate & Play Custom Mix", use_container_width=True):
                 selected_paths = [
                     st.session_state.stems[s] 
-                    for s, active in mix_selections.items() if active
+                    for s in st.session_state.stems.keys() 
+                    if s != "Custom Mix" and st.session_state.get(f"mix_{s}", True)
                 ]
                 if selected_paths:
                     output_mix = get_output_path("mixes") / "custom_mix.wav"
