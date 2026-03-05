@@ -22,6 +22,7 @@ import soundfile as sf
 import librosa
 import socket
 import urllib.error
+import scipy.signal
 
 # --- IMAGEIO FFMPEG INJECTION ---
 try:
@@ -57,13 +58,68 @@ def get_file_hash(file_path):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
-def separate_audio(file_path, model_name="htdemucs"):
+def extract_flute_and_wind(other_path, out_path):
+    if Path(out_path).exists(): return out_path
+    try:
+        y, sr = librosa.load(other_path, sr=None)
+        # Harmonic extraction
+        y_harm, y_perc = librosa.effects.hpss(y, margin=1.2)
+        # Bandpass filter (250Hz - 3500Hz)
+        sos = scipy.signal.butter(10, [250, 3500], 'bandpass', fs=sr, output='sos')
+        y_flute = scipy.signal.sosfilt(sos, y_harm)
+        sf.write(out_path, y_flute, sr, subtype='PCM_16')
+    except Exception as e:
+        print(f"Flute DSP error: {e}")
+        shutil.copy2(other_path, out_path)
+    return out_path
+
+def extract_indian_percussion(other_path, drums_path, out_path):
+    if Path(out_path).exists(): return out_path
+    try:
+        y_other, sr = librosa.load(other_path, sr=None)
+        y_drums, _ = librosa.load(drums_path, sr=sr)
+        # Ensure same length
+        length = min(len(y_other), len(y_drums))
+        y_other = y_other[:length]
+        y_drums = y_drums[:length]
+        
+        # Extract percussion from both
+        _, y_perc_other = librosa.effects.hpss(y_other, margin=2.0)
+        _, y_perc_drums = librosa.effects.hpss(y_drums, margin=2.0)
+        
+        # Mix percussions
+        y_indian_perc = (y_perc_other + y_perc_drums) / 2.0
+        sf.write(out_path, y_indian_perc, sr, subtype='PCM_16')
+    except Exception as e:
+        print(f"Percussion DSP error: {e}")
+        shutil.copy2(drums_path, out_path)
+    return out_path
+
+def extract_acoustic_guitar(guitar_path, out_acoustic):
+    if Path(out_acoustic).exists():
+        return out_acoustic
+    try:
+        y, sr = librosa.load(guitar_path, sr=None, mono=False)
+        if y.ndim == 1 or y.shape[0] == 1:
+            sf.write(out_acoustic, y.T if y.ndim > 1 else y, sr, subtype='PCM_16')
+        else:
+            left, right = y[0], y[1]
+            side = (left - right) / 2.0
+            sf.write(out_acoustic, side, sr, subtype='PCM_16')
+    except Exception as e:
+        print(f"Acoustic Guitar DSP error: {e}")
+        shutil.copy2(guitar_path, out_acoustic)
+    return out_acoustic
+
+
+def separate_audio(file_path, model_name="htdemucs_6s"):
     """
-    Splits an audio file into 4 stems: Vocals, Drums, Bass, and Other.
+    Splits an audio file into 6 base stems: Vocals, Drums, Bass, Piano, Guitar, Other.
+    Then applies DSP to extract: Flute/Wind, Indian Percussion, Acoustic Guitar.
     
     Args:
         file_path: Path to the input audio file.
-        model_name: The Demucs model to use (default: htdemucs).
+        model_name: The Demucs model to use (default: htdemucs_6s).
         
     Returns:
         Dictionary mapping stem names to their absolute file paths.
@@ -76,16 +132,28 @@ def separate_audio(file_path, model_name="htdemucs"):
     output_folder_name = f"{clean_name}_{file_hash[:8]}"
     track_dir = OUTPUT_DIR / model_name / output_folder_name
     
-    expected_stems = {
+    # Base demucs stems
+    demucs_stems = {
         "vocals": track_dir / "vocals.wav",
         "drums": track_dir / "drums.wav",
         "bass": track_dir / "bass.wav",
+        "piano": track_dir / "piano.wav",
+        "guitar": track_dir / "guitar.wav",
         "other": track_dir / "other.wav"
     }
     
+    # Derived stems
+    derived_stems = {
+        "flute_and_wind": track_dir / "flute_and_wind.wav",
+        "indian_percussion": track_dir / "indian_percussion.wav",
+        "acoustic_guitar": track_dir / "acoustic_guitar.wav"
+    }
+    
+    expected_stems = {**demucs_stems, **derived_stems}
+    
     # --- CACHE CHECK ---
     if all(p.exists() for p in expected_stems.values()):
-        print(f"Demucs: Cache hit for {output_folder_name}")
+        print(f"Demucs & DSP: Cache hit for {output_folder_name}")
         return expected_stems
 
     print(f"Demucs: Cache miss. Processing {file_path}...")
@@ -132,23 +200,41 @@ def separate_audio(file_path, model_name="htdemucs"):
         # Set a default timeout for underlying socket operations (e.g. model downloads)
         socket.setdefaulttimeout(15.0)
         
-        demucs.separate.main(args)
-        
-        # Demucs creates a nested structure. We rename it to our hash-based folder.
-        default_output_dir = OUTPUT_DIR / model_name / file_path.stem
-        if default_output_dir.exists():
-            if track_dir.exists():
-                shutil.rmtree(track_dir)
-            default_output_dir.rename(track_dir)
+        # Only run demucs if base stems are missing
+        if not all(p.exists() for p in demucs_stems.values()):
+            demucs.separate.main(args)
+            
+            # Demucs creates a nested structure. We rename it to our hash-based folder.
+            default_output_dir = OUTPUT_DIR / model_name / file_path.stem
+            if default_output_dir.exists():
+                if track_dir.exists():
+                    shutil.rmtree(track_dir)
+                default_output_dir.rename(track_dir)
+                
+        # --- POST-PROCESSING DSP ---
+        # The guitar and other stems might be missing if Demucs failed or the model wasn't 6s
+        if (track_dir / "other.wav").exists():
+            extract_flute_and_wind(track_dir / "other.wav", track_dir / "flute_and_wind.wav")
+            if (track_dir / "drums.wav").exists():
+                extract_indian_percussion(track_dir / "other.wav", track_dir / "drums.wav", track_dir / "indian_percussion.wav")
+        else:
+             # Fallbacks if other is missing
+             (track_dir / "flute_and_wind.wav").touch()
+             (track_dir / "indian_percussion.wav").touch()
+
+        if (track_dir / "guitar.wav").exists():
+            extract_acoustic_guitar(track_dir / "guitar.wav", track_dir / "acoustic_guitar.wav")
+        else:
+             (track_dir / "acoustic_guitar.wav").touch()
             
     except socket.timeout:
         raise RuntimeError(f"Connection timed out after 15s. The distant server or proxy failed to respond.")
     except urllib.error.URLError as e:
         raise RuntimeError(f"Network routing failed. The server cannot be reached: {str(e)}")
     except Exception as e:
-        raise RuntimeError(f"Demucs separation failed: {e}")
+        raise RuntimeError(f"Demucs separation / DSP failed: {e}")
         
-    return expected_stems
+    return {k: v for k, v in expected_stems.items() if v.exists() and v.stat().st_size > 0}
 
 def extract_pitch_librosa(file_path, duration=60):
     """
@@ -197,8 +283,8 @@ def extract_pitch_librosa(file_path, duration=60):
         if current_note is not None:
              note_events.append((start_time, times[-1], current_note))
              
-        # Filter noise (notes shorter than 100ms)
-        return str(file_path), [n for n in note_events if (n[1] - n[0]) > 0.1]
+        # Filter noise: increase threshold to 150ms instead of 100ms
+        return str(file_path), [n for n in note_events if (n[1] - n[0]) > 0.15]
         
     except socket.timeout:
         print("Librosa Transcription Error: Connection timed out after 15s during external operation.")

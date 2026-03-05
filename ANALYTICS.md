@@ -3,8 +3,8 @@
 This report summarizes the effort and technical journey of creating the Ragam App using Google Antigravity.
 
 ## Global Metrics
-- **Total Iterations**: ~65 (Prompt sequences and autonomous corrections)
-- **Estimated Development Time**: 140 minutes
+- **Total Iterations**: ~75 (Including Music Strategist logic and Global Agent enhancements)
+- **Estimated Development Time**: 160 minutes
 - **Successful Modules**: Audio Separation (Demucs), Transcription (Basic Pitch/Librosa), Key Detection, Raga Matching, Harmonic Analysis, Streamlit UI, Windows Packaging.
 
 ## Detailed Error Log & Resolution
@@ -17,6 +17,7 @@ This report summarizes the effort and technical journey of creating the Ragam Ap
 | **Logic/Crash** | Low | Argument mismatch in `mix_stems` (missing directory check). | Added `parent.mkdir(parents=True, exist_ok=True)` before file writes. |
 | **Performance** | Low | Deep analysis hanging on long audio files. | Implemented a 60-second processing limit for pitch extraction and MD5-based result caching. |
 | **UI State Loss** | Low | Streamlit re-runs destroying conditionally rendered media players (Custom Mix). | Decoupled UI media elements from the button execution block to rely directly on `st.session_state` keys instead. |
+| **Indian Instrument Bleed** | Medium | Global AI models aren't specifically trained to natively output Carnatic Flute or Tabla stems. | Designed custom `scipy.signal` bandpass filters and `librosa` harmonic-percussive separators (HPSS) to approximate these instruments from the base Demucs output. |
 
 ## Automation Efficacy
 - **Autonomous Fix Rate**: ~85% (Antigravity resolved most environment and logic bugs without user intervention).

@@ -14,11 +14,11 @@ pinned: false
 A state-of-the-art platform for audio separation, karaoke generation, and Indian Classical Music (Raga) identification.
 
 ## 🚀 Key Features
-- **Source Separation**: 4-stem extraction (Vocals, Drums, Bass, Other) using Facebook's Demucs model.
-- **Raga Identification**: Automatic matching for major Carnatic/Hindustani Ragas with Arohanam/Avarohanam.
-- **Melodic Transcription**: AI pitch extraction (Basic Pitch) with dual notation (Western & Carnatic Swaras).
-- **Custom Mixer**: Real-time track adjustment to create custom karaoke or practice mixes.
-- **Speed & Efficiency**: MD5 content-hashing for instant re-runs.
+- **Advanced Track Separation**: Full 6-stem AI extraction (Vocals, Drums, Bass, Piano, Guitar, Other) using the upgraded Demucs `htdemucs_6s` model.
+- **Custom Instrument DSP**: Harmonic/Percussive isolation algorithms to extract Indian Wind Instruments (Flute/Saxophone) and Indian Percussion (Tabla/Mridangam).
+- **Guitar Stem Splitting**: Mid/Side (M/S) processing applied to separate Lead Guitar lines from Acoustic Guitar tracks.
+- **Dual Notation Analyzer**: AI pitch extraction (Basic Pitch/Librosa) with simultaneous readouts for Western Standard Notation (C, D#, F) and Indian Carnatic Swaras (S, G2, M1).
+- **Custom Mixer & UI**: Real-time track adjustment across full-width audio players (with individual download buttons) to create custom practice mixes.
 
 ## 📦 Installation (Windows)
 

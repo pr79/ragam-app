@@ -14,6 +14,7 @@ import os
 import sys
 import time
 import traceback
+from streamlit_advanced_audio import audix
 from pathlib import Path
 
 # --- BOOTSTRAP: FFmpeg & Environment ---
@@ -103,11 +104,14 @@ if "stems" not in st.session_state:
     st.session_state.stems = {}           # Dict: {stem_name: local_path}
 if "original_audio" not in st.session_state:
     st.session_state.original_audio = None # Path to uploaded file
+if "analysis_results" not in st.session_state:
+    st.session_state.analysis_results = None
 
 def reset_session_state():
     """Callback fired when a new file is uploaded to prevent old stems from showing."""
     st.session_state.stems = {}
     st.session_state.analyze_target = None
+    st.session_state.analysis_results = None
 
 # --- UI HEADER ---
 st.title("🎵 AI Music Separator & Raga Identifier")
@@ -129,7 +133,7 @@ if uploaded_file is not None:
     file_path = save_uploaded_file(uploaded_file)
     st.session_state.original_audio = file_path
     
-    st.audio(str(file_path), format='audio/wav')
+    audix(str(file_path), key="audix_original")
     st.success(f"File ready: {uploaded_file.name}")
 
     # --- SIDEBAR CONTROLS ---
@@ -148,12 +152,17 @@ if uploaded_file is not None:
             st.info("Waiting for Separation...")
 
     # --- MAIN ACTION AREA ---
-    col1, col2 = st.columns(2)
+    tab_sep, tab_ana = st.tabs(["🎛️ Separate Tracks", "🎼 Analyze Music"])
     
-    with col1:
-        st.subheader("1. Source Separation")
-        st.write("Split song into Vocals, Bass, Drums, and Others.")
-        if st.button("Run Demucs Separator", use_container_width=True):
+    with tab_sep:
+        st.subheader("🎛️ Source Separation & Mixing")
+        st.write("Split song into Vocals, Bass, Drums, Piano, Guitar, Flute, and Percussion.")
+        
+        btn_col, _ = st.columns([1, 2])
+        with btn_col:
+            run_separator = st.button("Run AI Separator (Demucs 6s + DSP)", use_container_width=True, type="primary")
+            
+        if run_separator:
             with st.spinner("Processing audio... This uses MD5 caching for speed."):
                 try:
                     start_time = time.time()
@@ -161,7 +170,6 @@ if uploaded_file is not None:
                     elapsed = time.time() - start_time
                     st.session_state.stems = stem_paths
                     
-                    # Logic to identify if we used cache
                     if elapsed < 2.0:
                         st.success(f"Restored from Cache ({elapsed:.2f}s)!")
                     else:
@@ -170,151 +178,180 @@ if uploaded_file is not None:
                     st.error(f"Separation failed: {e}")
                     st.code(traceback.format_exc())
 
-    with col2:
-        st.subheader("2. Instant Analysis")
-        st.write("Analyze the full track without separation.")
-        if st.button("Analyze Original", use_container_width=True):
-             # Trigger analysis without changing dropdown focus
-             st.session_state.analyze_target = "Original"
-
-    # --- SECTION 2: STEM MIXER ---
-    if st.session_state.stems:
-        st.divider()
-        st.subheader("🎛️ Stem Mixer")
-        st.info("Adjust which tracks to include in your custom mix (e.g., for Karaoke).")
-        
-        with st.container(border=True):
-            stems_list = list(st.session_state.stems.items())
-            cols = st.columns(len(stems_list))
-            mix_selections = {}
+        if st.session_state.stems:
+            st.divider()
+            st.subheader("🎚️ Separated Tracks")
+            st.info("Adjust which tracks to include in your custom mix (e.g., for Karaoke). Download individual tracks via the buttons.")
             
-            # Interactive stem preview and selection
-            for j, (stem_name, stem_path) in enumerate(stems_list):
-                if stem_name == "Custom Mix": continue # Don't mix the mix
-                with cols[j]:
-                    st.markdown(f"**{stem_name.title()}**")
-                    st.audio(str(stem_path), format="audio/wav")
-                    mix_selections[stem_name] = st.checkbox(
-                        "Include", value=True, key=f"mix_{stem_name}"
-                    )
-
-            # Execution of the mixer
+            mix_selections = {}
+            stems_list = list(st.session_state.stems.items())
+            
+            for stem_name, stem_path in stems_list:
+                if stem_name == "Custom Mix": continue
+                
+                with st.container(border=True):
+                    # Responsive columns for each track row
+                    row_col1, row_col2, row_col3 = st.columns([1.5, 4, 1])
+                    
+                    with row_col1:
+                        display_name = stem_name.replace("_", " ").title()
+                        st.markdown(f"**{display_name}**")
+                        mix_selections[stem_name] = st.checkbox("Include in Mix", value=True, key=f"mix_{stem_name}")
+                        
+                    with row_col2:
+                        audix(str(stem_path), key=f"audix_{stem_name}")
+                        
+                    with row_col3:
+                        with open(stem_path, "rb") as f:
+                            st.download_button(
+                                label="⬇️ Download",
+                                data=f,
+                                file_name=f"{stem_name}.wav",
+                                mime="audio/wav",
+                                key=f"dl_{stem_name}",
+                                use_container_width=True
+                            )
+                            
+            st.markdown("---")
             if st.button("Generate & Play Custom Mix", use_container_width=True):
                 selected_paths = [
                     st.session_state.stems[s] 
                     for s, active in mix_selections.items() if active
                 ]
                 if selected_paths:
-                    # Output is saved to 'data/outputs/mixes'
                     output_mix = get_output_path("mixes") / "custom_mix.wav"
                     mix_stems(selected_paths, output_mix)
                     st.session_state.stems["Custom Mix"] = str(output_mix) 
                 else:
                     st.warning("Please select at least one track to mix.")
-
-            # Independent display of the generated mix (persists across re-runs)
+                    
             if "Custom Mix" in st.session_state.stems:
-                st.markdown("---")
                 st.markdown("### 🎧 Your Custom Mix")
-                st.audio(st.session_state.stems["Custom Mix"], format="audio/wav")
+                custom_mix_path = st.session_state.stems["Custom Mix"]
+                with st.container(border=True):
+                    row_col1, row_col2, row_col3 = st.columns([1.5, 4, 1])
+                    with row_col1:
+                        st.markdown("**Custom Mix**")
+                    with row_col2:
+                        audix(str(custom_mix_path), key="audix_custom_mix")
+                    with row_col3:
+                        with open(custom_mix_path, "rb") as f:
+                            st.download_button(
+                                label="⬇️ Download Mix",
+                                data=f,
+                                file_name="Custom-Mix.wav",
+                                mime="audio/wav",
+                                key="dl_custom_mix",
+                                use_container_width=True
+                            )
 
-    st.divider()
-    
-    # --- SECTION 3: MUSIC THEORY ANALYSIS ---
-    st.subheader("🎼 Raga & Notation Analysis")
-    st.write("Identify Ragas, transcribe notes, and detect chord progressions.")
-    
-    # Track selection for analysis (usually Vocals is best for Raga identification)
-    analysis_options = []
-    if st.session_state.original_audio:
-        analysis_options.append("Original")
-    if st.session_state.stems:
-        analysis_options.extend([
-            k for k in st.session_state.stems.keys() 
-            if k not in ["Original", "Custom Mix"]
-        ])
+    with tab_ana:
+        # --- SECTION 3: MUSIC THEORY ANALYSIS ---
+        st.subheader("🎼 Raga & Notation Analysis")
+        st.write("Identify Ragas, transcribe notes, and detect chord progressions.")
         
-    col_opt, col_go = st.columns([3, 1])
-    with col_opt:
-        target_stem = st.selectbox(
-            "Track to Analyze", analysis_options, 
-            index=0, label_visibility="collapsed"
-        )
-    with col_go:
-        analyze_clicked = st.button("Run Analysis", type="primary", use_container_width=True)
-    
-    # Conditional logic to trigger analysis from multiple locations
-    if analyze_clicked or st.session_state.get("analyze_target"):
-        if st.session_state.get("analyze_target") == "Original":
-             target_stem = "Original"
-             st.session_state.analyze_target = None
-             
-        # Resolve target file path
-        target_path = (
-            st.session_state.original_audio 
-            if target_stem == "Original" 
-            else st.session_state.stems[target_stem]
-        )
+        # Track selection for analysis
+        analysis_options = []
+        if st.session_state.original_audio:
+            analysis_options.append("Original")
+        if st.session_state.stems:
+            analysis_options.extend([
+                k for k in st.session_state.stems.keys() 
+                if k not in ["Original", "Custom Mix"]
+            ])
+            
+        col_opt, col_go = st.columns([3, 1])
+        with col_opt:
+            target_stem = st.selectbox(
+                "Track to Analyze", analysis_options, 
+                index=0, label_visibility="collapsed"
+            )
+        with col_go:
+            analyze_clicked = st.button("Run Analysis", type="primary", use_container_width=True)
         
-        with st.status(f"Processing '{target_stem}'...", expanded=True) as status:
-            # Step A: Estimate Tonic (Sa)
-            st.write("Detecting Tonic / Key...")
-            tonic_idx, tonic_name, chroma_mean = estimate_key(target_path)
+        if analyze_clicked:
+            target_path = (
+                st.session_state.original_audio 
+                if target_stem == "Original" 
+                else st.session_state.stems[target_stem]
+            )
             
-            # Step B: Identify Raga
-            st.write("Matching Scale against Raga Database...")
-            raga_info, scale_indices = identify_raga(chroma_mean, tonic_idx)
-            
-            # Step C: Transcription (AI Pitch Extraction)
-            st.write("Transcribing Melodic Line...")
-            mid_path, note_events = transcribe_audio(target_path)
-            
-            # Step D: Harmonic Analysis (Chords)
-            st.write("Analyzing Harmony / Chords...")
-            times, chords = detect_chords_over_time(target_path, duration=30)
-            
-            # Change state to 'complete' without the green checkmark
-            status.update(label="Analysis Done!", state="complete", expanded=True)
+            with st.status(f"Processing '{target_stem}'...", expanded=True) as status:
+                st.write("Detecting Tonic / Key...")
+                tonic_idx, tonic_name, chroma_mean = estimate_key(target_path)
+                
+                st.write("Matching Scale against Raga Database...")
+                raga_info, scale_indices = identify_raga(chroma_mean, tonic_idx)
+                
+                st.write("Transcribing Melodic Line...")
+                mid_path, note_events = transcribe_audio(target_path)
+                
+                st.write("Analyzing Harmony / Chords...")
+                times, chords = detect_chords_over_time(target_path, duration=30)
+                
+                st.session_state.analysis_results = {
+                    "tonic_name": tonic_name,
+                    "tonic_idx": tonic_idx,
+                    "raga_info": raga_info,
+                    "chords": chords,
+                    "note_events": note_events,
+                    "target_stem": target_stem
+                }
+                
+                status.update(label="Analysis Done!", state="complete", expanded=True)
 
-        # --- RESULTS LAYOUT ---
-        res_col1, res_col2 = st.columns(2)
-        
-        with res_col1:
-            st.info(f"**Detected Tonic (Sa)**: {tonic_name}")
-            if raga_info:
-                st.success(f"**Raga Match**: {raga_info['name']}")
-                st.caption(f"**Arohanam**: {raga_info['aro']}")
-                st.caption(f"**Avarohanam**: {raga_info['ava']}")
+        results = st.session_state.analysis_results
+        if results:
+            st.markdown("---")
+            st.markdown(f"**Analysis Results for Track:** `{results['target_stem']}`")
+            
+            # --- RESULTS LAYOUT ---
+            st.info(f"**Detected Tonic (Sa)**: {results['tonic_name']}")
+            
+            if results['raga_info']:
+                st.success(f"**Raga Match**: {results['raga_info']['name']}")
+                raga_col1, raga_col2 = st.columns(2)
+                with raga_col1:
+                    st.warning(f"**Arohanam** (Ascending)\n\n{results['raga_info']['aro']}")
+                with raga_col2:
+                    st.warning(f"**Avarohanam** (Descending)\n\n{results['raga_info']['ava']}")
             else:
-                 st.warning("**Raga**: No confident match found in current database.")
+                st.warning("**Raga**: No confident match found in current database.")
 
-        with res_col2:
-             # Unique chord sequence for the intro segment
-             chord_seq = " ➔ ".join([
-                 c for i, c in enumerate(chords) 
-                 if i == 0 or c != chords[i-1]
-             ])
-             st.markdown("**Core Chord Progression**")
-             st.text_area("Progression", chord_seq, height=100)
+            chord_seq = " ➔ ".join([
+                c for i, c in enumerate(results['chords']) 
+                if i == 0 or c != results['chords'][i-1]
+            ])
+            st.markdown("### 🎹 Harmonic Core")
+            st.markdown("**Core Chord Progression**")
+            st.info(chord_seq)
 
-        # Melodic Data Display
-        if len(note_events) > 0:
-            st.markdown("### 🎵 Melodic Transcription (Swaras)")
-            
-            # Show a readable swara sequence (first 30 notes)
-            swara_str = format_swara_sequence(note_events[:30], tonic_idx)
-            st.code(swara_str, language="text")
-            
-            with st.expander("Detailed Pitch Data (CSV Table)"):
-                note_data = []
-                for start, end, midi_note in note_events: 
-                    western = midi_to_western(midi_note)
-                    carnatic = note_to_swaras(midi_note, tonic_idx)
-                    note_data.append({
-                        "Time (s)": f"{start:.2f}-{end:.2f}",
-                        "Western": western,
-                        "Carnatic": carnatic
-                    })
-                st.dataframe(note_data, use_container_width=True)
-        else:
-             st.info("No melodic notes detected in this selection.")
+            # Melodic Data Display
+            if len(results['note_events']) > 0:
+                st.markdown("### 🎵 Melodic Transcription")
+                
+                carnatic_swaras = []
+                western_notes = []
+                for start, end, midi in results['note_events'][:30]:
+                    western_notes.append(midi_to_western(midi))
+                    carnatic_swaras.append(note_to_swaras(midi, results['tonic_idx']))
+                
+                st.markdown("**Carnatic Notations**")
+                st.success("   ".join(carnatic_swaras))
+                
+                st.markdown("**Western Notations**")
+                st.success("   ".join(western_notes))
+                
+                with st.expander("Detailed Pitch Data (CSV Table)"):
+                    note_data = []
+                    for start, end, midi_note in results['note_events']: 
+                        western = midi_to_western(midi_note)
+                        carnatic = note_to_swaras(midi_note, results['tonic_idx'])
+                        note_data.append({
+                            "Time (s)": f"{start:.2f}-{end:.2f}",
+                            "Western Note": western,
+                            "Carnatic Swara": carnatic
+                        })
+                    st.dataframe(note_data, use_container_width=True)
+            else:
+                 st.info("No melodic notes detected in this selection.")
