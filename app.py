@@ -15,8 +15,14 @@ import sys
 import time
 import traceback
 import base64
+import logging
 import streamlit.components.v1 as components
 from pathlib import Path
+from config.config import LOG_LEVEL, LOG_DIR, SUPPORTED_AUDIO_FORMATS, FFMPEG_BIN_DIR
+
+logging.basicConfig(level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format="%(asctime)s [%(levelname)-5s] %(name)s — %(message)s")
+log = logging.getLogger(__name__)
 
 # --- BOOTSTRAP: FFmpeg & Environment ---
 # We inject the local 'bin' folder (containing ffmpeg.exe) into the PATH 
@@ -28,14 +34,14 @@ else:
     # Running as a Python script
     base_path = Path(__file__).parent.resolve()
 
-local_bin = (base_path / "bin").resolve()
+local_bin = (base_path / FFMPEG_BIN_DIR).resolve()
 
 if local_bin.exists():
     # Prepend to PATH to ensure our bundled FFmpeg takes precedence
     os.environ["PATH"] = str(local_bin) + os.pathsep + os.environ["PATH"]
 else:
     # This might happen in development if setup_ffmpeg.py hasn't run
-    print(f"WARNING: 'bin' folder not found at {local_bin}")
+    log.warning("'bin' folder not found at %s — ffmpeg may fail", local_bin)
 
 # --- UI CONFIGURATION ---
 st.set_page_config(
